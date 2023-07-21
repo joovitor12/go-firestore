@@ -48,19 +48,19 @@ func main() {
 		return c.JSON(doc.Data())
 	})
 
-	// Defina uma rota para escrever dados no Firestore
 	appFiber.Post("/marvel/:name", func(c *fiber.Ctx) error {
-		// Obtenha o parâmetro ":name" da URL
+
 		name := c.Params("name")
 
-		// Chame a função para buscar o personagem na API da Marvel
+		// buscando o personagem na API da Marvel
 		character, err := findMarvelCharacters(name, c)
 		if err != nil {
 			return c.Status(500).SendString("Erro ao buscar personagem na API da Marvel")
 		}
 
-		// Escreva os dados do Character no Firestore com o ID como chave do documento
-		_, err = client.Collection("characters").Doc(fmt.Sprintf("%d", character.ID)).Set(context.Background(), character)
+		// escrevendo dados no Firestore
+		marvelCollectionRef := client.Collection("marvel-characters")
+		_, err = marvelCollectionRef.Doc(fmt.Sprintf("%d", character.ID)).Set(context.Background(), character)
 		if err != nil {
 			return c.Status(500).SendString("Erro ao escrever dados no Firestore")
 		}
@@ -68,13 +68,13 @@ func main() {
 		return c.SendString("Personagem armazenado no Firestore com sucesso")
 	})
 
-	// Defina a porta na qual o servidor irá ouvir
+	// definindo porta
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
 	}
 
-	// Inicie o servidor Fiber
+	// inicializando server
 	log.Fatal(appFiber.Listen(":" + port))
 
 }
