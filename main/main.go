@@ -50,29 +50,24 @@ func main() {
 
 	// Defina uma rota para escrever dados no Firestore
 	appFiber.Post("/marvel/:name", func(c *fiber.Ctx) error {
+		// Obtenha o parâmetro ":name" da URL
 		name := c.Params("name")
 
-		// Parseie o corpo da requisição para a struct Character
-		character := findMarvelCharacters(name, c)
-		fmt.Print(character)
-		if err := c.BodyParser(character); err != nil {
-			return c.Status(400).SendString("Dados inválidos")
-		}
-
 		// Chame a função para buscar o personagem na API da Marvel
-		err := findMarvelCharacters(name, c)
+		character, err := findMarvelCharacters(name, c)
 		if err != nil {
 			return c.Status(500).SendString("Erro ao buscar personagem na API da Marvel")
 		}
 
 		// Escreva os dados do Character no Firestore com o ID como chave do documento
-		_, err = client.Collection("characters").Doc("content").Set(context.Background(), character)
+		_, err = client.Collection("characters").Doc(fmt.Sprintf("%d", character.ID)).Set(context.Background(), character)
 		if err != nil {
 			return c.Status(500).SendString("Erro ao escrever dados no Firestore")
 		}
 
 		return c.SendString("Personagem armazenado no Firestore com sucesso")
 	})
+
 	// Defina a porta na qual o servidor irá ouvir
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -84,7 +79,7 @@ func main() {
 
 }
 
-func findMarvelCharacters(name string, c *fiber.Ctx) error {
+func findMarvelCharacters(name string, c *fiber.Ctx) (*Character, error) {
 	response, err := http.Get("http://gateway.marvel.com/v1/public/characters?name=" + name + "&ts=1&apikey=5ee728ad5618f7807e45d5f757e08697&hash=711c3b1a81ec2711ec846e2ab60e91c8")
 
 	if err != nil {
@@ -113,7 +108,7 @@ func findMarvelCharacters(name string, c *fiber.Ctx) error {
 	}
 
 	if len(result.Data.Results) == 0 {
-		return c.Status(http.StatusNotFound).SendString("Personagem não encontrado")
+		return nil, fmt.Errorf("Personagem não encontrado")
 	}
 
 	character := result.Data.Results[0]
@@ -122,6 +117,5 @@ func findMarvelCharacters(name string, c *fiber.Ctx) error {
 	fmt.Printf("Name: %s\n", character.Name)
 	fmt.Printf("Description: %s\n", character.Description)
 
-	//esse retorno ta errado, tem que retornar o character e nao o json dele
-	return c.JSON(character)
+	return &character, nil
 }
