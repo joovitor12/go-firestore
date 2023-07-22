@@ -19,8 +19,9 @@ type Character struct {
 }
 
 func main() {
-	// Inicialize o Firebase com suas credenciais
+	// inicializando o Firebase com credenciais
 	err := godotenv.Load()
+
 	if err != nil {
 		log.Fatalf("Erro ao carregar variáveis de ambiente: %v\n", err)
 	}
@@ -38,14 +39,14 @@ func main() {
 		log.Fatalf("Erro ao inicializar o app Firebase: %v\n", err)
 	}
 
-	// Inicialize o Firestore
+	// inicizando o Firestore
 	client, err := app.Firestore(context.Background())
 	if err != nil {
 		log.Fatalf("Erro ao inicializar o Firestore: %v\n", err)
 	}
 	defer client.Close()
 
-	// Crie um novo aplicativo Fiber
+	// inicializando o Fiber
 	appFiber := fiber.New()
 
 	// rotas marvel
