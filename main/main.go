@@ -8,6 +8,7 @@ import (
 
 	firebase "firebase.google.com/go"
 	"github.com/gofiber/fiber/v2"
+	"github.com/joho/godotenv"
 	"google.golang.org/api/option"
 )
 
@@ -19,7 +20,18 @@ type Character struct {
 
 func main() {
 	// Inicialize o Firebase com suas credenciais
-	opt := option.WithCredentialsFile("serviceAccountKeyPDI.json")
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Erro ao carregar variáveis de ambiente: %v\n", err)
+	}
+
+	firebaseCredentials := os.Getenv("FIREBASE_CREDENTIALS")
+
+	if firebaseCredentials == "" {
+		log.Fatalf("Variável de ambiente FIREBASE_CREDENTIALS não definida\n")
+	}
+
+	opt := option.WithCredentialsFile(firebaseCredentials)
 	config := &firebase.Config{ProjectID: "pdi-go"}
 	app, err := firebase.NewApp(context.Background(), config, opt)
 	if err != nil {

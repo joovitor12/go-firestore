@@ -7,6 +7,7 @@ require firebase.google.com/go/v4 v4.12.0
 require (
 	github.com/gofiber/utils v0.0.10 // indirect
 	github.com/gorilla/schema v1.1.0 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 )
 
 require (
