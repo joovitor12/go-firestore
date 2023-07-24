@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"cloud.google.com/go/firestore"
+	firebase "firebase.google.com/go"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -86,4 +87,28 @@ func getMarvelCharacter(name string, c *fiber.Ctx) (*Character, error) {
 	fmt.Printf("Description: %s\n", character.Description)
 
 	return &character, nil
+}
+
+func getMarvelCharacterFromDB(c *fiber.Ctx, name string) (*Character, error) {
+	client, err := c.Locals("firebase").(*firebase.App).Firestore(context.Background())
+
+	if err != nil {
+		log.Fatalf("Error in getting firestore client: %v", err)
+	}
+	defer client.Close()
+
+	doc, err := client.Collection("marvel-characters").Doc(name).Get(c.Context())
+
+	if err != nil {
+		log.Printf("Error in getting character: %s", err)
+	}
+
+	var character Character
+
+	if err := doc.DataTo(&character); err != nil {
+		log.Printf("Error in getting character with name : %s - %v", err, character)
+	}
+
+	return &character, nil
+
 }
