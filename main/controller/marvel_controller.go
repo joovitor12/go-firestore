@@ -2,24 +2,17 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"net/http"
+	"main/utils"
 
 	"cloud.google.com/go/firestore"
-	firebase "firebase.google.com/go"
 	"github.com/gofiber/fiber/v2"
 )
 
-type Character struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
 func MarvelController(app *fiber.App, client *firestore.Client) {
+
+	app.Use(setupFirestore(client))
+
 	app.Get("/", func(c *fiber.Ctx) error {
 		doc, err := client.Collection("marvel-characters").Doc("character").Get(c.Context())
 		if err != nil {
@@ -31,8 +24,18 @@ func MarvelController(app *fiber.App, client *firestore.Client) {
 	app.Post("/marvel/:name", func(c *fiber.Ctx) error {
 		name := c.Params("name")
 
+		// firestoreObj, err := utils.GetMarvelCharacterFromDB(c, name)
+
+		// if err != nil {
+		// 	return c.Status(500).SendString("Erro ao buscar personagem no Firestore")
+		// }
+
+		// if firestoreObj != nil {
+		// 	return c.JSON(firestoreObj)
+		// }
+
 		// buscando o personagem na API da Marvel
-		character, err := getMarvelCharacter(name, c)
+		character, err := utils.GetMarvelCharacter(name, c)
 		if err != nil {
 			return c.Status(500).SendString("Erro ao buscar personagem na API da Marvel")
 		}
@@ -48,67 +51,9 @@ func MarvelController(app *fiber.App, client *firestore.Client) {
 	})
 }
 
-func getMarvelCharacter(name string, c *fiber.Ctx) (*Character, error) {
-	response, err := http.Get("http://gateway.marvel.com/v1/public/characters?name=" + name + "&ts=1&apikey=5ee728ad5618f7807e45d5f757e08697&hash=711c3b1a81ec2711ec846e2ab60e91c8")
-
-	if err != nil {
-		log.Fatalf("Error: %s", err)
+func setupFirestore(firestoreClient *firestore.Client) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		c.Locals("firebase", firestoreClient)
+		return c.Next()
 	}
-
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		log.Fatalf("Error at API: %s", response.Status)
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Fatalf("Error at body: %s", err)
-	}
-
-	var result struct {
-		Data struct {
-			Results []Character `json:"results"`
-		} `json:"data"`
-	}
-
-	if err := json.Unmarshal(body, &result); err != nil {
-		log.Fatalf("Error at Unmarshal: %s", err)
-	}
-
-	if len(result.Data.Results) == 0 {
-		return nil, fmt.Errorf("Personagem não encontrado")
-	}
-
-	character := result.Data.Results[0]
-
-	fmt.Printf("ID: %d\n", character.ID)
-	fmt.Printf("Name: %s\n", character.Name)
-	fmt.Printf("Description: %s\n", character.Description)
-
-	return &character, nil
-}
-
-func getMarvelCharacterFromDB(c *fiber.Ctx, name string) (*Character, error) {
-	client, err := c.Locals("firebase").(*firebase.App).Firestore(context.Background())
-
-	if err != nil {
-		log.Fatalf("Error in getting firestore client: %v", err)
-	}
-	defer client.Close()
-
-	doc, err := client.Collection("marvel-characters").Doc(name).Get(c.Context())
-
-	if err != nil {
-		log.Printf("Error in getting character: %s", err)
-	}
-
-	var character Character
-
-	if err := doc.DataTo(&character); err != nil {
-		log.Printf("Error in getting character with name : %s - %v", err, character)
-	}
-
-	return &character, nil
-
 }
